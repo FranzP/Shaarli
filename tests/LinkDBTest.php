@@ -101,7 +101,7 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
      * Attempt to instantiate a LinkDB whereas the datastore is not writable
      *
      * @expectedException              IOException
-     * @expectedExceptionMessageRegExp /Error accessing null/
+     * @expectedExceptionMessageRegExp /Error accessing\nnull/
      */
     public function testConstructDatastoreNotWriteable()
     {
@@ -117,7 +117,7 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
         unlink(self::$testDatastore);
         $this->assertFileNotExists(self::$testDatastore);
 
-        $checkDB = self::getMethod('_checkDB');
+        $checkDB = self::getMethod('check');
         $checkDB->invokeArgs($linkDB, array());
         $this->assertFileExists(self::$testDatastore);
 
@@ -134,7 +134,7 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
         $datastoreSize = filesize(self::$testDatastore);
         $this->assertGreaterThan(0, $datastoreSize);
 
-        $checkDB = self::getMethod('_checkDB');
+        $checkDB = self::getMethod('check');
         $checkDB->invokeArgs($linkDB, array());
 
         // ensure the datastore is left unmodified
@@ -180,7 +180,7 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
     /**
      * Save the links to the DB
      */
-    public function testSaveDB()
+    public function testSave()
     {
         $testDB = new LinkDB(self::$testDatastore, true, false);
         $dbSize = sizeof($testDB);
@@ -194,7 +194,7 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
             'tags'=>'unit test'
         );
         $testDB[$link['linkdate']] = $link;
-        $testDB->savedb('tests');
+        $testDB->save('tests');
 
         $testDB = new LinkDB(self::$testDatastore, true, false);
         $this->assertEquals($dbSize + 1, sizeof($testDB));
@@ -256,7 +256,7 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
         $link = self::$publicLinkDB->getLinkFromUrl('http://mediagoblin.org/');
 
         $this->assertNotEquals(false, $link);
-        $this->assertEquals(
+        $this->assertContains(
             'A free software media publishing platform',
             $link['description']
         );
@@ -290,7 +290,10 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
                 'stallman' => 1,
                 'free' => 1,
                 '-exclude' => 1,
-                'stuff' => 2,
+                // The DB contains a link with `sTuff` and another one with `stuff` tag.
+                // They need to be grouped with the first case found (`sTuff`).
+                'sTuff' => 2,
+                'hashtag' => 2,
             ),
             self::$publicLinkDB->allTags()
         );
@@ -310,9 +313,14 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
                 'w3c' => 1,
                 'css' => 1,
                 'Mercurial' => 1,
-                'stuff' => 2,
+                'sTuff' => 2,
                 '-exclude' => 1,
                 '.hidden' => 1,
+                'hashtag' => 2,
+                'tag1' => 1,
+                'tag2' => 1,
+                'tag3' => 1,
+                'tag4' => 1,
             ),
             self::$privateLinkDB->allTags()
         );
@@ -338,6 +346,13 @@ class LinkDBTest extends PHPUnit_Framework_TestCase
         $db = new LinkDB(self::$testDatastore, false, false, $redirector);
         foreach($db as $link) {
             $this->assertStringStartsWith($redirector, $link['real_url']);
+            $this->assertNotFalse(strpos($link['real_url'], urlencode('://')));
+        }
+
+        $db = new LinkDB(self::$testDatastore, false, false, $redirector, false);
+        foreach($db as $link) {
+            $this->assertStringStartsWith($redirector, $link['real_url']);
+            $this->assertFalse(strpos($link['real_url'], urlencode('://')));
         }
     }
 

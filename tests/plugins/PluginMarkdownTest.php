@@ -8,8 +8,8 @@ require_once 'application/Utils.php';
 require_once 'plugins/markdown/markdown.php';
 
 /**
- * Class PlugQrcodeTest
- * Unit test for the QR-Code plugin
+ * Class PluginMarkdownTest
+ * Unit test for the Markdown plugin
  */
 class PluginMarkdownTest extends PHPUnit_Framework_TestCase
 {
@@ -125,12 +125,16 @@ class PluginMarkdownTest extends PHPUnit_Framework_TestCase
         $data = array(
             'links' => array(array(
                 'description' => $str,
-                'tags' => NO_MD_TAG
+                'tags' => NO_MD_TAG,
+                'taglist' => array(NO_MD_TAG),
             ))
         );
 
-        $data = hook_markdown_render_linklist($data);
-        $this->assertEquals($str, $data['links'][0]['description']);
+        $processed = hook_markdown_render_linklist($data);
+        $this->assertEquals($str, $processed['links'][0]['description']);
+
+        $processed = hook_markdown_render_feed($data);
+        $this->assertEquals($str, $processed['links'][0]['description']);
 
         $data = array(
             // Columns data
@@ -140,7 +144,8 @@ class PluginMarkdownTest extends PHPUnit_Framework_TestCase
                     // nth link
                     0 => array(
                         'formatedDescription' => $str,
-                        'tags' => NO_MD_TAG
+                        'tags' => NO_MD_TAG,
+                        'taglist' => array(),
                     ),
                 ),
             ),
@@ -148,5 +153,36 @@ class PluginMarkdownTest extends PHPUnit_Framework_TestCase
 
         $data = hook_markdown_render_daily($data);
         $this->assertEquals($str, $data['cols'][0][0]['formatedDescription']);
+    }
+
+    /**
+     * Test that a close value to nomarkdown is not understand as nomarkdown (previous value `.nomarkdown`).
+     */
+    function testNoMarkdownNotExcactlyMatching()
+    {
+        $str = 'All _work_ and `no play` makes Jack a *dull* boy.';
+        $data = array(
+            'links' => array(array(
+                'description' => $str,
+                'tags' => '.' . NO_MD_TAG,
+                'taglist' => array('.'. NO_MD_TAG),
+            ))
+        );
+
+        $data = hook_markdown_render_feed($data);
+        $this->assertContains('<em>', $data['links'][0]['description']);
+    }
+
+    /**
+     * Test hashtag links processed with markdown.
+     */
+    function testMarkdownHashtagLinks()
+    {
+        $md = file_get_contents('tests/plugins/resources/markdown.md');
+        $md = format_description($md);
+        $html = file_get_contents('tests/plugins/resources/markdown.html');
+
+        $data = process_markdown($md);
+        $this->assertEquals($html, $data);
     }
 }

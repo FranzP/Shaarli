@@ -85,6 +85,7 @@ class UrlTest extends PHPUnit_Framework_TestCase
         $this->assertUrlIsCleaned('?utm_term=1n4l');
 
         $this->assertUrlIsCleaned('?xtor=some-url');
+        $this->assertUrlIsCleaned('?PHPSESSID=012345678910111213');
     }
 
     /**
@@ -180,5 +181,20 @@ class UrlTest extends PHPUnit_Framework_TestCase
     {
         $url = new Url('ftp://save.tld/mysave');
         $this->assertFalse($url->isHttp());
+    }
+
+    /**
+     * Test International Domain Name to ASCII conversion
+     */
+    function testIdnToAscii()
+    {
+        $ind = 'http://www.académie-française.fr/';
+        $expected = 'http://www.xn--acadmie-franaise-npb1a.fr/';
+        $url = new Url($ind);
+        $this->assertEquals($expected, $url->idnToAscii());
+
+        $notInd = 'http://www.academie-francaise.fr/';
+        $url = new Url($notInd);
+        $this->assertEquals($notInd, $url->idnToAscii());
     }
 }

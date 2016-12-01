@@ -28,6 +28,11 @@ class LinkFilter
     public static $FILTER_DAY    = 'FILTER_DAY';
 
     /**
+     * @var string Allowed characters for hashtags (regex syntax).
+     */
+    public static $HASHTAG_CHARS = '\p{Pc}\p{N}\p{L}\p{Mn}';
+
+    /**
      * @var array all available links.
      */
     private $links;
@@ -263,8 +268,10 @@ class LinkFilter
             for ($i = 0 ; $i < count($searchtags) && $found; $i++) {
                 // Exclusive search, quit if tag found.
                 // Or, tag not found in the link, quit.
-                if (($searchtags[$i][0] == '-' && in_array(substr($searchtags[$i], 1), $linktags))
-                    || ($searchtags[$i][0] != '-') && ! in_array($searchtags[$i], $linktags)
+                if (($searchtags[$i][0] == '-'
+                        && $this->searchTagAndHashTag(substr($searchtags[$i], 1), $linktags, $link['description']))
+                    || ($searchtags[$i][0] != '-')
+                        && ! $this->searchTagAndHashTag($searchtags[$i], $linktags, $link['description'])
                 ) {
                     $found = false;
                 }
@@ -307,6 +314,28 @@ class LinkFilter
     }
 
     /**
+     * Check if a tag is found in the taglist, or as an hashtag in the link description.
+     *
+     * @param string $tag         Tag to search.
+     * @param array  $taglist     List of tags for the current link.
+     * @param string $description Link description.
+     *
+     * @return bool True if found, false otherwise.
+     */
+    protected function searchTagAndHashTag($tag, $taglist, $description)
+    {
+        if (in_array($tag, $taglist)) {
+            return true;
+        }
+
+        if (preg_match('/(^| )#'. $tag .'([^'. self::$HASHTAG_CHARS .']|$)/mui', $description) > 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Convert a list of tags (str) to an array. Also
      * - handle case sensitivity.
      * - accepts spaces commas as separator.
@@ -322,7 +351,7 @@ class LinkFilter
         $tagsOut = $casesensitive ? $tags : mb_convert_case($tags, MB_CASE_LOWER, 'UTF-8');
         $tagsOut = str_replace(',', ' ', $tagsOut);
 
-        return array_filter(explode(' ', trim($tagsOut)), 'strlen');
+        return array_values(array_filter(explode(' ', trim($tagsOut)), 'strlen'));
     }
 }
 

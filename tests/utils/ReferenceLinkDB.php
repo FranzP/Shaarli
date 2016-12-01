@@ -13,39 +13,40 @@ class ReferenceLinkDB
     /**
      * Populates the test DB with reference data
      */
-    function __construct()
+    public function __construct()
     {
         $this->addLink(
             'Link title: @website',
             '?WDWyig',
-            'Stallman has a beard and is part of the Free Software Foundation (or not). Seriously, read this.',
+            'Stallman has a beard and is part of the Free Software Foundation (or not). Seriously, read this. #hashtag',
             0,
             '20150310_114651',
-            'stuff'
+            'sTuff'
         );
 
         $this->addLink(
             'Free as in Freedom 2.0 @website',
             'https://static.fsf.org/nosvn/faif-2.0.pdf',
-            'Richard Stallman and the Free Software Revolution. Read this.',
+            'Richard Stallman and the Free Software Revolution. Read this. #hashtag',
             0,
             '20150310_114633',
-            'free gnu software stallman -exclude stuff'
+            'free gnu software stallman -exclude stuff hashtag',
+            '20160803_093033'
         );
 
         $this->addLink(
             'MediaGoblin',
             'http://mediagoblin.org/',
-            'A free software media publishing platform',
+            'A free software media publishing platform #hashtagOther',
             0,
             '20130614_184135',
-            'gnu media web .hidden'
+            'gnu media web .hidden hashtag'
         );
 
         $this->addLink(
             'w3c-markup-validator',
             'https://dvcs.w3.org/hg/markup-validator/summary',
-            'Mercurial repository for the W3C Validator',
+            'Mercurial repository for the W3C Validator #private',
             1,
             '20141125_084734',
             'css html w3c web Mercurial'
@@ -54,7 +55,7 @@ class ReferenceLinkDB
         $this->addLink(
             'UserFriendly - Web Designer',
             'http://ars.userfriendly.org/cartoons/?id=20121206',
-            'Naming conventions...',
+            'Naming conventions... #private',
             0,
             '20121206_142300',
             'dev cartoon web'
@@ -75,14 +76,14 @@ class ReferenceLinkDB
             '',
             1,
             '20121206_182539',
-            'dev cartoon'
+            'dev cartoon tag1  tag2   tag3  tag4   '
         );
     }
 
     /**
      * Adds a new link
      */
-    protected function addLink($title, $url, $description, $private, $date, $tags)
+    protected function addLink($title, $url, $description, $private, $date, $tags, $updated = '')
     {
         $link = array(
             'title' => $title,
@@ -91,6 +92,7 @@ class ReferenceLinkDB
             'private' => $private,
             'linkdate' => $date,
             'tags' => $tags,
+            'updated' => $updated,
         );
         $this->_links[$date] = $link;
 
