@@ -1,11 +1,10 @@
 <?php
-
-require_once 'plugins/wallabag/WallabagInstance.php';
+namespace Shaarli\Plugin\Wallabag;
 
 /**
  * Class WallabagInstanceTest
  */
-class WallabagInstanceTest extends PHPUnit_Framework_TestCase
+class WallabagInstanceTest extends \Shaarli\TestCase
 {
     /**
      * @var string wallabag url.
@@ -15,7 +14,7 @@ class WallabagInstanceTest extends PHPUnit_Framework_TestCase
     /**
      * Reset plugin path
      */
-    function setUp()
+    protected function setUp(): void
     {
         $this->instance = 'http://some.url';
     }
@@ -23,7 +22,7 @@ class WallabagInstanceTest extends PHPUnit_Framework_TestCase
     /**
      * Test WallabagInstance with API V1.
      */
-    function testWallabagInstanceV1()
+    public function testWallabagInstanceV1()
     {
         $instance = new WallabagInstance($this->instance, 1);
         $expected = $this->instance . '/?plainurl=';
@@ -34,7 +33,7 @@ class WallabagInstanceTest extends PHPUnit_Framework_TestCase
     /**
      * Test WallabagInstance with API V2.
      */
-    function testWallabagInstanceV2()
+    public function testWallabagInstanceV2()
     {
         $instance = new WallabagInstance($this->instance, 2);
         $expected = $this->instance . '/bookmarklet?url=';
@@ -45,7 +44,7 @@ class WallabagInstanceTest extends PHPUnit_Framework_TestCase
     /**
      * Test WallabagInstance with an invalid API version.
      */
-    function testWallabagInstanceInvalidVersion()
+    public function testWallabagInstanceInvalidVersion()
     {
         $instance = new WallabagInstance($this->instance, false);
         $expected = $this->instance . '/?plainurl=';

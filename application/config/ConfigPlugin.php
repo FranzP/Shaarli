@@ -1,4 +1,8 @@
 <?php
+
+use Shaarli\Config\Exception\PluginConfigOrderException;
+use Shaarli\Plugin\PluginManager;
+
 /**
  * Plugin configuration helper functions.
  *
@@ -16,13 +20,27 @@
  */
 function save_plugin_config($formData)
 {
+    // We can only save existing plugins
+    $directories = str_replace(
+        PluginManager::$PLUGINS_PATH . '/',
+        '',
+        glob(PluginManager::$PLUGINS_PATH . '/*')
+    );
+    $formData = array_filter(
+        $formData,
+        function ($value, string $key) use ($directories) {
+            return startsWith($key, 'order') || in_array($key, $directories);
+        },
+        ARRAY_FILTER_USE_BOTH
+    );
+
     // Make sure there are no duplicates in orders.
     if (!validate_plugin_order($formData)) {
         throw new PluginConfigOrderException();
     }
 
-    $plugins = array();
-    $newEnabledPlugins = array();
+    $plugins = [];
+    $newEnabledPlugins = [];
     foreach ($formData as $key => $data) {
         if (startsWith($key, 'order')) {
             continue;
@@ -31,8 +49,7 @@ function save_plugin_config($formData)
         // If there is no order, it means a disabled plugin has been enabled.
         if (isset($formData['order_' . $key])) {
             $plugins[(int) $formData['order_' . $key]] = $key;
-        }
-        else {
+        } else {
             $newEnabledPlugins[] = $key;
         }
     }
@@ -45,7 +62,7 @@ function save_plugin_config($formData)
         throw new PluginConfigOrderException();
     }
 
-    $finalPlugins = array();
+    $finalPlugins = [];
     // Make plugins order continuous.
     foreach ($plugins as $plugin) {
         $finalPlugins[] = $plugin;
@@ -64,10 +81,10 @@ function save_plugin_config($formData)
  */
 function validate_plugin_order($formData)
 {
-    $orders = array();
+    $orders = [];
     foreach ($formData as $key => $value) {
         // No duplicate order allowed.
-        if (in_array($value, $orders)) {
+        if (in_array($value, $orders, true)) {
             return false;
         }
 
@@ -107,18 +124,4 @@ function load_plugin_parameter_values($plugins, $conf)
     }
 
     return $out;
-}
-
-/**
- * Exception used if an error occur while saving plugin configuration.
- */
-class PluginConfigOrderException extends Exception
-{
-    /**
-     * Construct exception.
-     */
-    public function __construct()
-    {
-        $this->message = 'An error occurred while trying to save plugins loading order.';
-    }
 }

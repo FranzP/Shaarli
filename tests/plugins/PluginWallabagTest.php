@@ -1,8 +1,8 @@
 <?php
+namespace Shaarli\Plugin\Wallabag;
 
-/**
- * PluginWallabagTest.php.php
- */
+use Shaarli\Config\ConfigManager;
+use Shaarli\Plugin\PluginManager;
 
 require_once 'plugins/wallabag/wallabag.php';
 
@@ -10,12 +10,12 @@ require_once 'plugins/wallabag/wallabag.php';
  * Class PluginWallabagTest
  * Unit test for the Wallabag plugin
  */
-class PluginWallabagTest extends PHPUnit_Framework_TestCase
+class PluginWallabagTest extends \Shaarli\TestCase
 {
     /**
      * Reset plugin path
      */
-    function setUp()
+    protected function setUp(): void
     {
         PluginManager::$PLUGINS_PATH = 'plugins';
     }
@@ -23,7 +23,7 @@ class PluginWallabagTest extends PHPUnit_Framework_TestCase
     /**
      * Test wallabag init without errors.
      */
-    function testWallabagInitNoError()
+    public function testWallabagInitNoError()
     {
         $conf = new ConfigManager('');
         $conf->set('plugins.WALLABAG_URL', 'value');
@@ -34,7 +34,7 @@ class PluginWallabagTest extends PHPUnit_Framework_TestCase
     /**
      * Test wallabag init with errors.
      */
-    function testWallabagInitError()
+    public function testWallabagInitError()
     {
         $conf = new ConfigManager('');
         $errors = wallabag_init($conf);
@@ -44,19 +44,20 @@ class PluginWallabagTest extends PHPUnit_Framework_TestCase
     /**
      * Test render_linklist hook.
      */
-    function testWallabagLinklist()
+    public function testWallabagLinklist()
     {
         $conf = new ConfigManager('');
         $conf->set('plugins.WALLABAG_URL', 'value');
         $str = 'http://randomstr.com/test';
-        $data = array(
+        $data = [
             'title' => $str,
-            'links' => array(
-                array(
+            'links' => [
+                [
                     'url' => $str,
-                )
-            )
-        );
+                ]
+            ],
+            '_LOGGEDIN_' => true,
+        ];
 
         $data = hook_wallabag_render_linklist($data, $conf);
         $link = $data['links'][0];
@@ -68,5 +69,27 @@ class PluginWallabagTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(1, count($link['link_plugin']));
         $this->assertNotFalse(strpos($link['link_plugin'][0], urlencode($str)));
         $this->assertNotFalse(strpos($link['link_plugin'][0], $conf->get('plugins.WALLABAG_URL')));
+    }
+
+    /**
+     * Test render_linklist hook while logged out: no change.
+     */
+    public function testWallabagLinklistLoggedOut(): void
+    {
+        $conf = new ConfigManager('');
+        $str = 'http://randomstr.com/test';
+        $data = [
+            'title' => $str,
+            'links' => [
+                [
+                    'url' => $str,
+                ]
+            ],
+            '_LOGGEDIN_' => false,
+        ];
+
+        $result = hook_wallabag_render_linklist($data, $conf);
+
+        static::assertSame($data, $result);
     }
 }

@@ -1,10 +1,12 @@
 <?php
 
 /**
- * Plugin Wallabag.
+ * Wallabag plugin
  */
 
-require_once 'WallabagInstance.php';
+use Shaarli\Config\ConfigManager;
+use Shaarli\Plugin\PluginManager;
+use Shaarli\Plugin\Wallabag\WallabagInstance;
 
 /**
  * Init function, return an error if the server is not set.
@@ -17,10 +19,11 @@ function wallabag_init($conf)
 {
     $wallabagUrl = $conf->get('plugins.WALLABAG_URL');
     if (empty($wallabagUrl)) {
-        $error = 'Wallabag plugin error: '.
-            'Please define the "WALLABAG_URL" setting in the plugin administration page.';
-        return array($error);
+        $error = t('Wallabag plugin error: ' .
+            'Please define the "WALLABAG_URL" setting in the plugin administration page.');
+        return [$error];
     }
+    $conf->setEmpty('plugins.WALLABAG_URL', '2');
 }
 
 /**
@@ -34,7 +37,7 @@ function wallabag_init($conf)
 function hook_wallabag_render_linklist($data, $conf)
 {
     $wallabagUrl = $conf->get('plugins.WALLABAG_URL');
-    if (empty($wallabagUrl)) {
+    if (empty($wallabagUrl) || !$data['_LOGGEDIN_']) {
         return $data;
     }
 
@@ -43,12 +46,16 @@ function hook_wallabag_render_linklist($data, $conf)
 
     $wallabagHtml = file_get_contents(PluginManager::$PLUGINS_PATH . '/wallabag/wallabag.html');
 
+    $linkTitle = t('Save to wallabag');
+    $path = ($data['_ROOT_PATH_'] ?? '') . '/' . PluginManager::$PLUGINS_PATH;
+
     foreach ($data['links'] as &$value) {
         $wallabag = sprintf(
             $wallabagHtml,
             $wallabagInstance->getWallabagUrl(),
-            urlencode($value['url']),
-            PluginManager::$PLUGINS_PATH
+            urlencode(unescape($value['url'])),
+            $path,
+            $linkTitle
         );
         $value['link_plugin'][] = $wallabag;
     }
@@ -56,3 +63,13 @@ function hook_wallabag_render_linklist($data, $conf)
     return $data;
 }
 
+/**
+ * This function is never called, but contains translation calls for GNU gettext extraction.
+ */
+function wallabag_dummy_translation()
+{
+    // meta
+    t('For each link, add a QRCode icon.');
+    t('Wallabag API URL');
+    t('Wallabag API version (1 or 2)');
+}

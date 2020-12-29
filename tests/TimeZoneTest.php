@@ -8,27 +8,48 @@ require_once 'application/TimeZone.php';
 /**
  * Unitary tests for timezone utilities
  */
-class TimeZoneTest extends PHPUnit_Framework_TestCase
+class TimeZoneTest extends \Shaarli\TestCase
 {
+    /**
+     * @var array of timezones
+     */
+    protected $installedTimezones;
+
+    protected function setUp(): void
+    {
+        $this->installedTimezones = [
+            'Antarctica/Syowa',
+            'Europe/London',
+            'Europe/Paris',
+            'UTC'
+        ];
+    }
+
     /**
      * Generate a timezone selection form
      */
     public function testGenerateTimeZoneForm()
     {
-        $generated = generateTimeZoneForm();
+        $expected = [
+            'continents' => [
+                'Antarctica',
+                'Europe',
+                'UTC',
+                'selected' => '',
+            ],
+            'cities' => [
+                ['continent' => 'Antarctica', 'city' => 'Syowa'],
+                ['continent' => 'Europe',     'city' => 'London'],
+                ['continent' => 'Europe',     'city' => 'Paris'],
+                ['continent' => 'UTC',        'city' => 'UTC'],
+                'selected'    => '',
+            ]
+        ];
 
-        // HTML form
-        $this->assertStringStartsWith('Continent:<select', $generated[0]);
-        $this->assertContains('selected="selected"', $generated[0]);
-        $this->assertStringEndsWith('</select><br />', $generated[0]);
+        list($continents, $cities) = generateTimeZoneData($this->installedTimezones);
 
-        // Javascript handler
-        $this->assertStringStartsWith('<script>', $generated[1]);
-        $this->assertContains(
-            '<option value=\"Bermuda\">Bermuda<\/option>',
-            $generated[1]
-        );
-        $this->assertStringEndsWith('</script>', $generated[1]);
+        $this->assertEquals($expected['continents'], $continents);
+        $this->assertEquals($expected['cities'], $cities);
     }
 
     /**
@@ -36,28 +57,26 @@ class TimeZoneTest extends PHPUnit_Framework_TestCase
      */
     public function testGenerateTimeZoneFormPreselected()
     {
-        $generated = generateTimeZoneForm('Antarctica/Syowa');
+        $expected = [
+            'continents' => [
+                'Antarctica',
+                'Europe',
+                'UTC',
+                'selected' => 'Antarctica',
+            ],
+            'cities' => [
+                ['continent' => 'Antarctica', 'city' => 'Syowa'],
+                ['continent' => 'Europe',     'city' => 'London'],
+                ['continent' => 'Europe',     'city' => 'Paris'],
+                ['continent' => 'UTC',        'city' => 'UTC'],
+                'selected'   => 'Syowa',
+            ]
+        ];
 
-        // HTML form
-        $this->assertStringStartsWith('Continent:<select', $generated[0]);
-        $this->assertContains(
-            'value="Antarctica" selected="selected"',
-            $generated[0]
-        );
-        $this->assertContains(
-            'value="Syowa" selected="selected"',
-            $generated[0]
-        );
-        $this->assertStringEndsWith('</select><br />', $generated[0]);
+        list($continents, $cities) = generateTimeZoneData($this->installedTimezones, 'Antarctica/Syowa');
 
-
-        // Javascript handler
-        $this->assertStringStartsWith('<script>', $generated[1]);
-        $this->assertContains(
-            '<option value=\"Bermuda\">Bermuda<\/option>',
-            $generated[1]
-        );
-        $this->assertStringEndsWith('</script>', $generated[1]);
+        $this->assertEquals($expected['continents'], $continents);
+        $this->assertEquals($expected['cities'], $cities);
     }
 
     /**

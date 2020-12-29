@@ -1,10 +1,13 @@
 <?php
+
 /**
  * Demo Plugin.
  *
- * This plugin try to cover Shaarli's plugin API entirely.
- * Can be used by plugin developper to make their own.
+ * This plugin tries to completely cover Shaarli's plugin API.
+ * Can be used by plugin developers to make their own plugin.
  */
+
+require_once __DIR__ . '/DemoPluginController.php';
 
 /*
  * RENDER HEADER, INCLUDES, FOOTER
@@ -13,6 +16,28 @@
  * You can filter its execution by checking _PAGE_ value
  * and check user status with _LOGGEDIN_.
  */
+
+use Shaarli\Config\ConfigManager;
+use Shaarli\Plugin\PluginManager;
+use Shaarli\Render\TemplatePage;
+
+/**
+ * In the footer hook, there is a working example of a translation extension for Shaarli.
+ *
+ * The extension must be attached to a new translation domain (i.e. NOT 'shaarli').
+ * Use case: any custom theme or non official plugin can use the translation system.
+ *
+ * See the documentation for more information.
+ */
+const EXT_TRANSLATION_DOMAIN = 'demo';
+
+/*
+ * This is not necessary, but it's easier if you don't want Poedit to mix up your translations.
+ */
+function demo_plugin_t($text, $nText = '', $nb = 1)
+{
+    return t($text, $nText, $nb, EXT_TRANSLATION_DOMAIN);
+}
 
 /**
  * Initialization function.
@@ -27,13 +52,30 @@ function demo_plugin_init($conf)
 {
     $conf->get('toto', 'nope');
 
+    if (! $conf->exists('translation.extensions.demo')) {
+        // Custom translation with the domain 'demo'
+        $conf->set('translation.extensions.demo', 'plugins/demo_plugin/languages/');
+        $conf->write(true);
+    }
+
     $errors[] = 'This a demo init error.';
     return $errors;
 }
 
+function demo_plugin_register_routes(): array
+{
+    return [
+        [
+            'method' => 'GET',
+            'route' => '/custom',
+            'callable' => 'Shaarli\DemoPlugin\DemoPluginController:index',
+        ],
+    ];
+}
+
 /**
  * Hook render_header.
- * Executed on every page redering.
+ * Executed on every page render.
  *
  * Template placeholders:
  *   - buttons_toolbar
@@ -46,26 +88,78 @@ function demo_plugin_init($conf)
 function hook_demo_plugin_render_header($data)
 {
     // Only execute when linklist is rendered.
-    if ($data['_PAGE_'] == Router::$PAGE_LINKLIST) {
-
+    if ($data['_PAGE_'] == TemplatePage::LINKLIST) {
         // If loggedin
         if ($data['_LOGGEDIN_'] === true) {
-            // Buttons in toolbar
-            $data['buttons_toolbar'][] = '<li><a href="#">DEMO_buttons_toolbar</a></li>';
+            /*
+             * Links in toolbar:
+             * A link is an array of its attributes (key="value"),
+             * and a mandatory `html` key, which contains its value.
+             */
+            $button = [
+                'attr' =>  [
+                    'href' => '#',
+                    'class' => 'mybutton',
+                    'title' => 'hover me',
+                ],
+                'html' => 'DEMO buttons toolbar',
+            ];
+            $data['buttons_toolbar'][] = $button;
         }
 
-        // Fields in toolbar
-        $data['fields_toolbar'][] = 'DEMO_fields_toolbar';
+        /*
+         * Add additional input fields in the tools.
+         * A field is an array containing:
+         *  [
+         *      'form-attribute-1' => 'form attribute 1 value',
+         *      'form-attribute-2' => 'form attribute 2 value',
+         *      'inputs' => [
+         *          [
+         *              'input-1-attribute-1 => 'input 1 attribute 1 value',
+         *              'input-1-attribute-2 => 'input 1 attribute 2 value',
+         *          ],
+         *          [
+         *              'input-2-attribute-1 => 'input 2 attribute 1 value',
+         *          ],
+         *      ],
+         *  ]
+         * This example renders as:
+         * <form form-attribute-1="form attribute 1 value" form-attribute-2="form attribute 2 value">
+         *   <input input-1-attribute-1="input 1 attribute 1 value" input-1-attribute-2="input 1 attribute 2 value">
+         *   <input input-2-attribute-1="input 2 attribute 1 value">
+         * </form>
+         */
+        $form = [
+            'attr' => [
+                'method' => 'GET',
+                'action' => $data['_BASE_PATH_'] . '/',
+                'class' => 'addform',
+            ],
+            'inputs' => [
+                [
+                    'type' => 'text',
+                    'name' => 'demo',
+                    'placeholder' => 'demo',
+                ]
+            ]
+        ];
+        $data['fields_toolbar'][] = $form;
     }
     // Another button always displayed
-    $data['buttons_toolbar'][] = '<li><a href="#">DEMO</a></li>';
+    $button = [
+        'attr' => [
+            'href' => '#',
+        ],
+        'html' => 'Demo',
+    ];
+    $data['buttons_toolbar'][] = $button;
 
     return $data;
 }
 
 /**
  * Hook render_includes.
- * Executed on every page redering.
+ * Executed on every page render.
  *
  * Template placeholders:
  *   - css_files
@@ -89,7 +183,7 @@ function hook_demo_plugin_render_includes($data)
 
 /**
  * Hook render_footer.
- * Executed on every page redering.
+ * Executed on every page render.
  *
  * Template placeholders:
  *   - text
@@ -106,8 +200,8 @@ function hook_demo_plugin_render_includes($data)
  */
 function hook_demo_plugin_render_footer($data)
 {
-    // footer text
-    $data['text'][] = 'Shaarli is now enhanced by the awesome demo_plugin.';
+    // Footer text
+    $data['text'][] = '<br>' . demo_plugin_t('Shaarli is now enhanced by the awesome demo_plugin.');
 
     // Free elements at the end of the page.
     $data['endofpage'][] = '<marquee id="demo_marquee">' .
@@ -143,8 +237,19 @@ function hook_demo_plugin_render_footer($data)
  */
 function hook_demo_plugin_render_linklist($data)
 {
-    // action_plugin
-    $data['action_plugin'][] = '<div class="upper_plugin_demo"><a href="?up" title="Uppercase!">←</a></div>';
+    /*
+     * Action links (action_plugin):
+     * A link is an array of its attributes (key="value"),
+     * and a mandatory `html` key, which contains its value.
+     * It's also recommended to add key 'on' or 'off' for theme rendering.
+     */
+    $action = [
+        'attr' => [
+            'href' => '?up',
+            'title' => 'Uppercase!',
+        ],
+        'html' => '←',
+    ];
 
     if (isset($_GET['up'])) {
         // Manipulate link data
@@ -152,7 +257,11 @@ function hook_demo_plugin_render_linklist($data)
             $value['description'] = strtoupper($value['description']);
             $value['title'] = strtoupper($value['title']);
         }
+        $action['on'] = true;
+    } else {
+        $action['off'] = true;
     }
+    $data['action_plugin'][] = $action;
 
     // link_plugin (for each link)
     foreach ($data['links'] as &$value) {
@@ -180,9 +289,9 @@ function hook_demo_plugin_render_linklist($data)
 function hook_demo_plugin_render_editlink($data)
 {
     // Load HTML into a string
-    $html = file_get_contents(PluginManager::$PLUGINS_PATH .'/demo_plugin/field.html');
+    $html = file_get_contents(PluginManager::$PLUGINS_PATH . '/demo_plugin/field.html');
 
-    // replace value in HTML if it exists in $data
+    // Replace value in HTML if it exists in $data
     if (!empty($data['link']['stuff'])) {
         $html = sprintf($html, $data['link']['stuff']);
     } else {
@@ -208,7 +317,11 @@ function hook_demo_plugin_render_editlink($data)
 function hook_demo_plugin_render_tools($data)
 {
     // field_plugin
-    $data['tools_plugin'][] = 'tools_plugin';
+    $data['tools_plugin'][] = '<div class="tools-item">
+        <a href="' . $data['_BASE_PATH_'] . '/plugin/demo_plugin/custom">
+          <span class="pure-button pure-u-lg-2-3 pure-u-3-4">Demo Plugin Custom Route</span>
+        </a>
+      </div>';
 
     return $data;
 }
@@ -229,9 +342,7 @@ function hook_demo_plugin_render_tools($data)
  */
 function hook_demo_plugin_render_picwall($data)
 {
-    // plugin_start_zone
     $data['plugin_start_zone'][] = '<center>BEFORE</center>';
-    // plugin_end_zone
     $data['plugin_end_zone'][] = '<center>AFTER</center>';
 
     return $data;
@@ -253,9 +364,7 @@ function hook_demo_plugin_render_picwall($data)
  */
 function hook_demo_plugin_render_tagcloud($data)
 {
-    // plugin_start_zone
     $data['plugin_start_zone'][] = '<center>BEFORE</center>';
-    // plugin_end_zone
     $data['plugin_end_zone'][] = '<center>AFTER</center>';
 
     return $data;
@@ -277,24 +386,18 @@ function hook_demo_plugin_render_tagcloud($data)
  */
 function hook_demo_plugin_render_daily($data)
 {
-    // plugin_start_zone
     $data['plugin_start_zone'][] = '<center>BEFORE</center>';
-    // plugin_end_zone
     $data['plugin_end_zone'][] = '<center>AFTER</center>';
 
 
     // Manipulate columns data
-    foreach ($data['cols'] as &$value) {
-        foreach ($value as &$value2) {
-            $value2['formatedDescription'] .= ' ಠ_ಠ';
-        }
+    foreach ($data['linksToDisplay'] as &$value) {
+        $value['formatedDescription'] .= ' ಠ_ಠ';
     }
 
     // Add plugin content at the end of each link
-    foreach ($data['cols'] as &$value) {
-        foreach ($value as &$value2) {
-            $value2['link_plugin'][] = 'DEMO';
-        }
+    foreach ($data['linksToDisplay'] as &$value) {
+        $value['link_plugin'][] = 'DEMO';
     }
 
     return $data;
@@ -356,12 +459,40 @@ function hook_demo_plugin_delete_link($data)
 function hook_demo_plugin_render_feed($data)
 {
     foreach ($data['links'] as &$link) {
-        if ($data['_PAGE_'] == Router::$PAGE_FEED_ATOM) {
+        if ($data['_PAGE_'] == TemplatePage::FEED_ATOM) {
             $link['description'] .= ' - ATOM Feed' ;
-        }
-        elseif ($data['_PAGE_'] == Router::$PAGE_FEED_RSS) {
+        } elseif ($data['_PAGE_'] == TemplatePage::FEED_RSS) {
             $link['description'] .= ' - RSS Feed';
         }
     }
     return $data;
+}
+
+/**
+ * When plugin parameters are saved.
+ *
+ * @param array $data $_POST array
+ *
+ * @return array Updated $_POST array
+ */
+function hook_demo_plugin_save_plugin_parameters($data)
+{
+    // Here we edit the provided value.
+    // This hook can also be used to generate config files, etc.
+    if (! empty($data['DEMO_PLUGIN_PARAMETER']) && ! endsWith($data['DEMO_PLUGIN_PARAMETER'], '_SUFFIX')) {
+        $data['DEMO_PLUGIN_PARAMETER'] .= '_SUFFIX';
+    }
+
+    return $data;
+}
+
+/**
+ * This function is never called, but contains translation calls for GNU gettext extraction.
+ */
+function demo_dummy_translation()
+{
+    // meta
+    t('A demo plugin covering all use cases for template designers and plugin developers.');
+    t('This is a parameter dedicated to the demo plugin. It\'ll be suffixed.');
+    t('Other demo parameter');
 }

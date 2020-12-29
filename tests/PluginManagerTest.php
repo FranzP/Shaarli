@@ -1,15 +1,13 @@
 <?php
 
-/**
- * Plugin Manager tests
- */
+namespace Shaarli\Plugin;
 
-require_once 'application/PluginManager.php';
+use Shaarli\Config\ConfigManager;
 
 /**
  * Unit tests for Plugins
  */
-class PluginManagerTest extends PHPUnit_Framework_TestCase
+class PluginManagerTest extends \Shaarli\TestCase
 {
     /**
      * Path to tests plugin.
@@ -28,7 +26,7 @@ class PluginManagerTest extends PHPUnit_Framework_TestCase
      */
     protected $pluginManager;
 
-    public function setUp()
+    public function setUp(): void
     {
         $conf = new ConfigManager('');
         $this->pluginManager = new PluginManager($conf);
@@ -36,60 +34,129 @@ class PluginManagerTest extends PHPUnit_Framework_TestCase
 
     /**
      * Test plugin loading and hook execution.
-     *
-     * @return void
      */
-    public function testPlugin()
+    public function testPlugin(): void
     {
         PluginManager::$PLUGINS_PATH = self::$pluginPath;
         $this->pluginManager->load(array(self::$pluginName));
 
         $this->assertTrue(function_exists('hook_test_random'));
 
-        $data = array(0 => 'woot');
+        $data = [0 => 'woot'];
         $this->pluginManager->executeHooks('random', $data);
-        $this->assertEquals('woot', $data[1]);
 
-        $data = array(0 => 'woot');
+        static::assertCount(2, $data);
+        static::assertSame('woot', $data[1]);
+
+        $data = [0 => 'woot'];
         $this->pluginManager->executeHooks('random', $data, array('target' => 'test'));
-        $this->assertEquals('page test', $data[1]);
 
-        $data = array(0 => 'woot');
+        static::assertCount(2, $data);
+        static::assertSame('page test', $data[1]);
+
+        $data = [0 => 'woot'];
         $this->pluginManager->executeHooks('random', $data, array('loggedin' => true));
-        $this->assertEquals('loggedin', $data[1]);
+
+        static::assertCount(2, $data);
+        static::assertEquals('loggedin', $data[1]);
+
+        $data = [0 => 'woot'];
+        $this->pluginManager->executeHooks('random', $data, array('loggedin' => null));
+
+        static::assertCount(3, $data);
+        static::assertEquals('loggedin', $data[1]);
+        static::assertArrayHasKey(2, $data);
+        static::assertNull($data[2]);
+    }
+
+    /**
+     * Test plugin loading and hook execution with an error: raise an incompatibility error.
+     */
+    public function testPluginWithPhpError(): void
+    {
+        PluginManager::$PLUGINS_PATH = self::$pluginPath;
+        $this->pluginManager->load(array(self::$pluginName));
+
+        $this->assertTrue(function_exists('hook_test_error'));
+
+        $data = [];
+        $this->pluginManager->executeHooks('error', $data);
+
+        $this->assertRegExp(
+            '/test \[plugin incompatibility\]: Class [\'"]Unknown[\'"] not found/',
+            $this->pluginManager->getErrors()[0]
+        );
     }
 
     /**
      * Test missing plugin loading.
-     *
-     * @return void
      */
-    public function testPluginNotFound()
+    public function testPluginNotFound(): void
     {
-        $this->pluginManager->load(array());
-        $this->pluginManager->load(array('nope', 'renope'));
+        $this->pluginManager->load([]);
+        $this->pluginManager->load(['nope', 'renope']);
+        $this->addToAssertionCount(1);
     }
 
     /**
      * Test plugin metadata loading.
      */
-    public function testGetPluginsMeta()
+    public function testGetPluginsMeta(): void
     {
         PluginManager::$PLUGINS_PATH = self::$pluginPath;
-        $this->pluginManager->load(array(self::$pluginName));
+        $this->pluginManager->load([self::$pluginName]);
 
-        $expectedParameters = array(
-            'pop' => array(
+        $expectedParameters = [
+            'pop' => [
                 'value' => '',
                 'desc'  => 'pop description',
-            ),
-            'hip' => array(
+            ],
+            'hip' => [
                 'value' => '',
                 'desc' => '',
-            ),
-        );
+            ],
+        ];
         $meta = $this->pluginManager->getPluginsMeta();
         $this->assertEquals('test plugin', $meta[self::$pluginName]['description']);
         $this->assertEquals($expectedParameters, $meta[self::$pluginName]['parameters']);
+    }
+
+    /**
+     * Test plugin custom routes - note that there is no check on callable functions
+     */
+    public function testRegisteredRoutes(): void
+    {
+        PluginManager::$PLUGINS_PATH = self::$pluginPath;
+        $this->pluginManager->load([self::$pluginName]);
+
+        $expectedParameters = [
+            [
+                'method' => 'GET',
+                'route' => '/test',
+                'callable' => 'getFunction',
+            ],
+            [
+                'method' => 'POST',
+                'route' => '/custom',
+                'callable' => 'postFunction',
+            ],
+        ];
+        $meta = $this->pluginManager->getRegisteredRoutes();
+        static::assertSame($expectedParameters, $meta[self::$pluginName]);
+    }
+
+    /**
+     * Test plugin custom routes with invalid route
+     */
+    public function testRegisteredRoutesInvalid(): void
+    {
+        $plugin = 'test_route_invalid';
+        $this->pluginManager->load([$plugin]);
+
+        $meta = $this->pluginManager->getRegisteredRoutes();
+        static::assertSame([], $meta);
+
+        $errors = $this->pluginManager->getErrors();
+        static::assertSame(['test_route_invalid [plugin incompatibility]: trying to register invalid route.'], $errors);
     }
 }

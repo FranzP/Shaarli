@@ -1,18 +1,21 @@
 <?php
-
-require_once 'application/config/ConfigPhp.php';
+namespace Shaarli\Config;
 
 /**
  * Class ConfigPhpTest
+ *
+ * We run tests in separate processes due to the usage for $GLOBALS
+ * which are kept between tests.
+ * @runTestsInSeparateProcesses
  */
-class ConfigPhpTest extends PHPUnit_Framework_TestCase
+class ConfigPhpTest extends \Shaarli\TestCase
 {
     /**
      * @var ConfigPhp
      */
     protected $configIO;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->configIO = new ConfigPhp();
     }
@@ -35,6 +38,20 @@ class ConfigPhpTest extends PHPUnit_Framework_TestCase
     public function testReadNonExistent()
     {
         $this->assertEquals(array(), $this->configIO->read('nope'));
+    }
+
+    /**
+     * Read an empty existent config file -> array with blank default values.
+     */
+    public function testReadEmpty()
+    {
+        $dataFile = 'tests/utils/config/emptyConfigPhp.php';
+        $conf = $this->configIO->read($dataFile);
+        $this->assertEmpty($conf['login']);
+        $this->assertEmpty($conf['title']);
+        $this->assertEmpty($conf['titleLink']);
+        $this->assertEmpty($conf['config']);
+        $this->assertEmpty($conf['plugins']);
     }
 
     /**

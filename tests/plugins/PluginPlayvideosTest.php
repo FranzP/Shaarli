@@ -1,22 +1,25 @@
 <?php
+namespace Shaarli\Plugin\Playvideos;
 
 /**
  * PluginPlayvideosTest.php
  */
 
+use Shaarli\Plugin\PluginManager;
+use Shaarli\Render\TemplatePage;
+
 require_once 'plugins/playvideos/playvideos.php';
-require_once 'application/Router.php';
 
 /**
  * Class PluginPlayvideosTest
  * Unit test for the PlayVideos plugin
  */
-class PluginPlayvideosTest extends PHPUnit_Framework_TestCase
+class PluginPlayvideosTest extends \Shaarli\TestCase
 {
     /**
      * Reset plugin path
      */
-    function setUp()
+    protected function setUp(): void
     {
         PluginManager::$PLUGINS_PATH = 'plugins';
     }
@@ -24,11 +27,11 @@ class PluginPlayvideosTest extends PHPUnit_Framework_TestCase
     /**
      * Test render_linklist hook.
      */
-    function testPlayvideosHeader()
+    public function testPlayvideosHeader()
     {
         $str = 'stuff';
         $data = array($str => $str);
-        $data['_PAGE_'] = Router::$PAGE_LINKLIST;
+        $data['_PAGE_'] = TemplatePage::LINKLIST;
 
         $data = hook_playvideos_render_header($data);
         $this->assertEquals($str, $data[$str]);
@@ -43,11 +46,11 @@ class PluginPlayvideosTest extends PHPUnit_Framework_TestCase
     /**
      * Test render_footer hook.
      */
-    function testPlayvideosFooter()
+    public function testPlayvideosFooter()
     {
         $str = 'stuff';
         $data = array($str => $str);
-        $data['_PAGE_'] = Router::$PAGE_LINKLIST;
+        $data['_PAGE_'] = TemplatePage::LINKLIST;
 
         $data = hook_playvideos_render_footer($data);
         $this->assertEquals($str, $data[$str]);

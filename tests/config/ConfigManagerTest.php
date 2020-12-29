@@ -1,4 +1,5 @@
 <?php
+namespace Shaarli\Config;
 
 /**
  * Unit tests for Class ConfigManagerTest
@@ -6,14 +7,14 @@
  * Note: it only test the manager with ConfigJson,
  *  ConfigPhp is only a workaround to handle the transition to JSON type.
  */
-class ConfigManagerTest extends PHPUnit_Framework_TestCase
+class ConfigManagerTest extends \Shaarli\TestCase
 {
     /**
      * @var ConfigManager
      */
     protected $conf;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->conf = new ConfigManager('tests/utils/config/configJson');
     }
@@ -80,35 +81,58 @@ class ConfigManagerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('testSetWriteGetNested', $this->conf->get('foo.bar.key.stuff'));
     }
 
+    public function testSetDeleteNested()
+    {
+        $this->conf->set('foo.bar.key.stuff', 'testSetDeleteNested');
+        $this->assertTrue($this->conf->exists('foo.bar'));
+        $this->assertTrue($this->conf->exists('foo.bar.key.stuff'));
+        $this->assertEquals('testSetDeleteNested', $this->conf->get('foo.bar.key.stuff'));
+
+        $this->conf->remove('foo.bar');
+        $this->assertFalse($this->conf->exists('foo.bar.key.stuff'));
+        $this->assertFalse($this->conf->exists('foo.bar'));
+    }
+
     /**
      * Set with an empty key.
-     *
-     * @expectedException Exception
-     * @expectedExceptionMessageRegExp #^Invalid setting key parameter. String expected, got.*#
      */
     public function testSetEmptyKey()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessageRegExp('#^Invalid setting key parameter. String expected, got.*#');
+
         $this->conf->set('', 'stuff');
     }
 
     /**
      * Set with an array key.
-     *
-     * @expectedException Exception
-     * @expectedExceptionMessageRegExp #^Invalid setting key parameter. String expected, got.*#
      */
     public function testSetArrayKey()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessageRegExp('#^Invalid setting key parameter. String expected, got.*#');
+
         $this->conf->set(array('foo' => 'bar'), 'stuff');
     }
 
     /**
+     * Remove with an empty key.
+     */
+    public function testRmoveEmptyKey()
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessageRegExp('#^Invalid setting key parameter. String expected, got.*#');
+
+        $this->conf->remove('');
+    }
+
+    /**
      * Try to write the config without mandatory parameter (e.g. 'login').
-     *
-     * @expectedException MissingFieldConfigException
      */
     public function testWriteMissingParameter()
     {
+        $this->expectException(\Shaarli\Config\Exception\MissingFieldConfigException::class);
+
         $this->conf->setConfigFile('tests/utils/config/configTmp');
         $this->assertFalse(file_exists($this->conf->getConfigFileExt()));
         $this->conf->reload();

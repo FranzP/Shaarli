@@ -1,22 +1,20 @@
 <?php
+namespace Shaarli\Plugin\Addlink;
 
-/**
- * PluginPlayvideosTest.php
- */
+use Shaarli\Plugin\PluginManager;
+use Shaarli\Render\TemplatePage;
 
 require_once 'plugins/addlink_toolbar/addlink_toolbar.php';
-require_once 'application/Router.php';
 
 /**
- * Class PluginAddlinkTest
  * Unit test for the Addlink toolbar plugin
  */
-class PluginAddlinkTest extends PHPUnit_Framework_TestCase
+class PluginAddlinkTest extends \Shaarli\TestCase
 {
     /**
      * Reset plugin path.
      */
-    function setUp()
+    protected function setUp(): void
     {
         PluginManager::$PLUGINS_PATH = 'plugins';
     }
@@ -24,12 +22,13 @@ class PluginAddlinkTest extends PHPUnit_Framework_TestCase
     /**
      * Test render_header hook while logged in.
      */
-    function testAddlinkHeaderLoggedIn()
+    public function testAddlinkHeaderLoggedIn()
     {
         $str = 'stuff';
         $data = array($str => $str);
-        $data['_PAGE_'] = Router::$PAGE_LINKLIST;
+        $data['_PAGE_'] = TemplatePage::LINKLIST;
         $data['_LOGGEDIN_'] = true;
+        $data['_BASE_PATH_'] = '/subfolder';
 
         $data = hook_addlink_toolbar_render_header($data);
         $this->assertEquals($str, $data[$str]);
@@ -38,6 +37,8 @@ class PluginAddlinkTest extends PHPUnit_Framework_TestCase
         $data = array($str => $str);
         $data['_PAGE_'] = $str;
         $data['_LOGGEDIN_'] = true;
+        $data['_BASE_PATH_'] = '/subfolder';
+
         $data = hook_addlink_toolbar_render_header($data);
         $this->assertEquals($str, $data[$str]);
         $this->assertArrayNotHasKey('fields_toolbar', $data);
@@ -46,55 +47,16 @@ class PluginAddlinkTest extends PHPUnit_Framework_TestCase
     /**
      * Test render_header hook while logged out.
      */
-    function testAddlinkHeaderLoggedOut()
+    public function testAddlinkHeaderLoggedOut()
     {
         $str = 'stuff';
         $data = array($str => $str);
-        $data['_PAGE_'] = Router::$PAGE_LINKLIST;
+        $data['_PAGE_'] = TemplatePage::LINKLIST;
         $data['_LOGGEDIN_'] = false;
+        $data['_BASE_PATH_'] = '/subfolder';
 
         $data = hook_addlink_toolbar_render_header($data);
         $this->assertEquals($str, $data[$str]);
         $this->assertArrayNotHasKey('fields_toolbar', $data);
-    }
-
-    /**
-     * Test render_includes hook while logged in.
-     */
-    function testAddlinkIncludesLoggedIn()
-    {
-        $str = 'stuff';
-        $data = array($str => $str);
-        $data['_PAGE_'] = Router::$PAGE_LINKLIST;
-        $data['_LOGGEDIN_'] = true;
-
-        $data = hook_addlink_toolbar_render_includes($data);
-        $this->assertEquals($str, $data[$str]);
-        $this->assertEquals(1, count($data['css_files']));
-
-        $str = 'stuff';
-        $data = array($str => $str);
-        $data['_PAGE_'] = $str;
-        $data['_LOGGEDIN_'] = true;
-
-        $data = hook_addlink_toolbar_render_includes($data);
-        $this->assertEquals($str, $data[$str]);
-        $this->assertArrayNotHasKey('css_files', $data);
-    }
-
-    /**
-     * Test render_includes hook.
-     * Should not affect css files while logged out.
-     */
-    function testAddlinkIncludesLoggedOut()
-    {
-        $str = 'stuff';
-        $data = array($str => $str);
-        $data['_PAGE_'] = Router::$PAGE_LINKLIST;
-        $data['_LOGGEDIN_'] = false;
-
-        $data = hook_addlink_toolbar_render_includes($data);
-        $this->assertEquals($str, $data[$str]);
-        $this->assertArrayNotHasKey('css_files', $data);
     }
 }
